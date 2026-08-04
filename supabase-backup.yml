@@ -1,0 +1,26 @@
+name: Sauvegarde nocturne Supabase
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # tous les jours à 3h00 UTC (~4h/5h heure française)
+  workflow_dispatch: {}  # permet aussi de le lancer manuellement depuis l'onglet Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Installer les outils PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Exporter la base Supabase
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_dump "$DATABASE_URL" --no-owner --no-privileges -F c -f backup.dump
+
+      - name: Uploader la sauvegarde (conservée 30 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: backup.dump
+          retention-days: 30
